@@ -180,10 +180,10 @@ export default function EvaluarPropuestaPage() {
                   <div className="bg-blue-900/30 text-blue-400 w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0 mt-1">
                     {criterio.orden || '-'}
                   </div>
-                  <div className="flex-1">
-                    <h3 className="font-bold text-slate-200 text-lg mb-2">{criterio.titulo}</h3>
+                  <div className="flex-1 min-w-0 overflow-hidden">
+                    <h3 className="font-bold text-slate-200 text-lg mb-2 break-words">{criterio.titulo}</h3>
                     <div 
-                      className="text-sm text-slate-400 quill-content" 
+                      className="text-sm text-slate-400 quill-content w-full" 
                       dangerouslySetInnerHTML={{ __html: criterio.descripcion }} 
                     />
                   </div>

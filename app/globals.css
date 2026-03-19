@@ -68,6 +68,8 @@ body {
 /* Rendering Rich Text Output (quill-content) */
 .quill-content p {
   margin-bottom: 0.5rem;
+  word-break: break-word; /* Prevents long words from causing overflow */
+  overflow-wrap: break-word;
 }
 .quill-content p:last-child {
   margin-bottom: 0;
@@ -76,11 +78,25 @@ body {
   list-style-type: disc;
   padding-left: 1.5rem;
   margin-bottom: 0.5rem;
+  word-break: break-word;
 }
 .quill-content ol {
   list-style-type: decimal;
   padding-left: 1.5rem;
   margin-bottom: 0.5rem;
+  word-break: break-word;
+}
+
+/* Ensure any pre/code blocks wrap properly on mobile */
+.quill-content pre, .quill-content code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* Ensure images or media don't break the layout */
+.quill-content img {
+  max-width: 100%;
+  height: auto;
 }
 .quill-content strong {
   color: #f8fafc; /* text-slate-50 */
