@@ -132,15 +132,25 @@ export default function DetalleRankingPage() {
               const totalScore = Object.values(puntajes).reduce((acc: number, val: any) => acc + Number(val), 0);
               const juradoData = evaluacion.expand?.jurado;
               const nombreJurado = juradoData?.name || juradoData?.email || 'Jurado Anónimo';
+              const avatarUrl = juradoData?.avatar ? pb.files.getURL(juradoData, juradoData.avatar) : null;
 
               return (
                 <div key={evaluacion.id} className="bg-slate-900/80 rounded-xl border border-slate-800 overflow-hidden">
                   {/* Encabezado de la evaluación */}
                   <div className="bg-slate-800/50 p-4 border-b border-slate-800 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-bold border border-slate-600">
-                        {nombreJurado.charAt(0).toUpperCase()}
-                      </div>
+                      {avatarUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img 
+                          src={avatarUrl} 
+                          alt={`Avatar de ${nombreJurado}`} 
+                          className="w-10 h-10 rounded-full border border-slate-600 object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-300 font-bold border border-slate-600">
+                          {nombreJurado.charAt(0).toUpperCase()}
+                        </div>
+                      )}
                       <div>
                         <div className="text-sm text-slate-400">Evaluador</div>
                         <div className="font-bold text-slate-200">{nombreJurado}</div>
