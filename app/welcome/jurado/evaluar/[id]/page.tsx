@@ -76,12 +76,12 @@ export default function EvaluarPropuestaPage() {
   const handleGuardarEvaluacion = async () => {
     if (!user || !propuesta) return;
 
-    // Validar que todos los criterios tengan un puntaje
-    const criteriosFaltantes = criterios.filter(c => !puntajes[c.id]);
-    if (criteriosFaltantes.length > 0) {
-      alert('Por favor, califica todos los criterios antes de guardar.');
-      return;
-    }
+    // Validar que todos los criterios tengan un puntaje (Opcional: se permite guardar incompleto)
+    // const criteriosFaltantes = criterios.filter(c => !puntajes[c.id]);
+    // if (criteriosFaltantes.length > 0) {
+    //   alert('Por favor, califica todos los criterios antes de guardar.');
+    //   return;
+    // }
 
     try {
       setIsSubmittingEvaluacion(true);

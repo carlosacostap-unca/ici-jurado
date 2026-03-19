@@ -14,7 +14,7 @@ export default function AdminWelcomePage() {
   const [user, setUser] = useState<RecordModel | null>(null);
   
   // Pestañas
-  const [activeTab, setActiveTab] = useState<'propuestas' | 'criterios'>('propuestas');
+  const [activeTab, setActiveTab] = useState<'propuestas' | 'criterios' | 'dashboard'>('propuestas');
 
   // Estados para las propuestas
   const [propuestas, setPropuestas] = useState<RecordModel[]>([]);
@@ -34,6 +34,22 @@ export default function AdminWelcomePage() {
   const [isLoadingCriterios, setIsLoadingCriterios] = useState(true);
   const [editingCriterioId, setEditingCriterioId] = useState<string | null>(null);
 
+  // Estados para el dashboard
+  const [dashboardData, setDashboardData] = useState<{
+    totalEvaluaciones: number;
+    totalJurados: number;
+    promedioGeneral: number;
+    ranking: {
+      propuestaId: string;
+      titulo: string;
+      expositor: string;
+      totalPuntaje: number;
+      cantidadEvaluaciones: number;
+      promedio: number;
+    }[];
+  } | null>(null);
+  const [isLoadingDashboard, setIsLoadingDashboard] = useState(false);
+
   useEffect(() => {
     if (!pb.authStore.isValid || !pb.authStore.model) {
       router.push('/login');
@@ -50,6 +66,7 @@ export default function AdminWelcomePage() {
     // Cargar datos al iniciar
     cargarPropuestas();
     cargarCriterios();
+    cargarDashboard();
 
     // Escuchar cambios de autenticación
     return pb.authStore.onChange((token, model) => {
@@ -226,6 +243,67 @@ export default function AdminWelcomePage() {
     }
   };
 
+  // --- MÉTODOS PARA DASHBOARD ---
+  const cargarDashboard = async () => {
+    try {
+      setIsLoadingDashboard(true);
+      
+      const [evaluacionesRes, propuestasRes] = await Promise.all([
+        pb.collection('evaluaciones').getFullList({ expand: 'propuesta,jurado' }),
+        pb.collection('propuestas').getFullList({ sort: 'orden' })
+      ]);
+
+      const totalEvaluaciones = evaluacionesRes.length;
+      
+      // Contar jurados únicos
+      const juradosUnicos = new Set(evaluacionesRes.map(e => e.jurado));
+      const totalJurados = juradosUnicos.size;
+
+      // Calcular puntajes por propuesta
+      const rankingMap = new Map<string, { total: number; count: number }>();
+      
+      evaluacionesRes.forEach(ev => {
+        const propuestaId = ev.propuesta;
+        const puntajes = ev.puntajes || {};
+        const sumaPuntajes = Object.values(puntajes).reduce((a: any, b: any) => Number(a) + Number(b), 0);
+        
+        const current = rankingMap.get(propuestaId) || { total: 0, count: 0 };
+        rankingMap.set(propuestaId, {
+          total: current.total + Number(sumaPuntajes),
+          count: current.count + 1
+        });
+      });
+
+      const ranking = propuestasRes.map(p => {
+        const stats = rankingMap.get(p.id) || { total: 0, count: 0 };
+        return {
+          propuestaId: p.id,
+          titulo: p.titulo,
+          expositor: p.expositor,
+          totalPuntaje: stats.total,
+          cantidadEvaluaciones: stats.count,
+          promedio: stats.count > 0 ? Number((stats.total / stats.count).toFixed(2)) : 0
+        };
+      }).sort((a, b) => b.totalPuntaje - a.totalPuntaje); // Ordenar por puntaje total descendente
+
+      const promedioGeneral = ranking.length > 0 
+        ? ranking.reduce((acc, curr) => acc + curr.promedio, 0) / ranking.length 
+        : 0;
+
+      setDashboardData({
+        totalEvaluaciones,
+        totalJurados,
+        promedioGeneral: Number(promedioGeneral.toFixed(2)),
+        ranking
+      });
+
+    } catch (error) {
+      console.error("Error al cargar dashboard:", error);
+    } finally {
+      setIsLoadingDashboard(false);
+    }
+  };
+
   const handleLogout = () => {
     pb.authStore.clear();
     router.push('/login');
@@ -298,6 +376,12 @@ export default function AdminWelcomePage() {
               className={`font-medium text-lg pb-2 border-b-2 transition-colors ${activeTab === 'criterios' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
             >
               Criterios de Evaluación
+            </button>
+            <button 
+              onClick={() => { setActiveTab('dashboard'); cargarDashboard(); }}
+              className={`font-medium text-lg pb-2 border-b-2 transition-colors ${activeTab === 'dashboard' ? 'border-blue-500 text-blue-400' : 'border-transparent text-slate-400 hover:text-slate-300'}`}
+            >
+              Dashboard
             </button>
           </div>
 
@@ -434,7 +518,7 @@ export default function AdminWelcomePage() {
             )}
           </div>
             </>
-          ) : (
+          ) : activeTab === 'criterios' ? (
             <>
               {/* Formulario de Creación / Edición Criterio */}
               <div className="bg-slate-900 p-4 sm:p-6 rounded-2xl shadow-sm border border-slate-800">
@@ -567,6 +651,103 @@ export default function AdminWelcomePage() {
                 )}
               </div>
             </>
+          ) : (
+            // Dashboard Content
+            <div className="space-y-6">
+              {isLoadingDashboard ? (
+                <div className="text-center py-12">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500 mb-4"></div>
+                  <p className="text-slate-400">Calculando estadísticas...</p>
+                </div>
+              ) : dashboardData ? (
+                <>
+                  {/* Tarjetas de Resumen */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-sm">
+                      <div className="text-slate-400 text-sm font-medium mb-1">Total Evaluaciones</div>
+                      <div className="text-3xl font-bold text-white">{dashboardData.totalEvaluaciones}</div>
+                    </div>
+                    <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-sm">
+                      <div className="text-slate-400 text-sm font-medium mb-1">Jurados Participantes</div>
+                      <div className="text-3xl font-bold text-blue-400">{dashboardData.totalJurados}</div>
+                    </div>
+                    <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 shadow-sm">
+                      <div className="text-slate-400 text-sm font-medium mb-1">Promedio General</div>
+                      <div className="text-3xl font-bold text-green-400">{dashboardData.promedioGeneral}</div>
+                    </div>
+                  </div>
+
+                  {/* Tabla de Ranking */}
+                  <div className="bg-slate-900 rounded-2xl border border-slate-800 shadow-sm overflow-hidden">
+                    <div className="p-6 border-b border-slate-800">
+                      <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                        <span>🏆</span> Ranking de Propuestas
+                      </h2>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm text-slate-400">
+                        <thead className="bg-slate-950 text-slate-200 uppercase font-medium">
+                          <tr>
+                            <th className="px-6 py-4">Propuesta</th>
+                            <th className="px-6 py-4">Expositor</th>
+                            <th className="px-6 py-4 text-center">Evaluaciones</th>
+                            <th className="px-6 py-4 text-center">Puntaje Total</th>
+                            <th className="px-6 py-4 text-center">Promedio</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-800">
+                          {dashboardData.ranking.length === 0 ? (
+                            <tr>
+                              <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                                No hay datos suficientes para generar el ranking.
+                              </td>
+                            </tr>
+                          ) : (
+                            dashboardData.ranking.map((item, index) => (
+                              <tr key={item.propuestaId} className="hover:bg-slate-800/50 transition-colors">
+                                <td className="px-6 py-4 font-medium text-white">
+                                  <div className="flex items-center gap-3">
+                                    <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${
+                                      index === 0 ? 'bg-yellow-500 text-yellow-950' : 
+                                      index === 1 ? 'bg-slate-400 text-slate-900' : 
+                                      index === 2 ? 'bg-orange-700 text-orange-100' : 'bg-slate-800 text-slate-400'
+                                    }`}>
+                                      {index + 1}
+                                    </span>
+                                    {item.titulo}
+                                  </div>
+                                </td>
+                                <td className="px-6 py-4">{item.expositor}</td>
+                                <td className="px-6 py-4 text-center">
+                                  <span className="bg-slate-800 px-2 py-1 rounded text-xs text-slate-300">
+                                    {item.cantidadEvaluaciones}
+                                  </span>
+                                </td>
+                                <td className="px-6 py-4 text-center font-mono text-blue-400">{item.totalPuntaje}</td>
+                                <td className="px-6 py-4 text-center">
+                                  <span className={`font-bold px-2 py-1 rounded ${
+                                    item.promedio >= 4.5 ? 'text-green-400 bg-green-900/20' :
+                                    item.promedio >= 4.0 ? 'text-blue-400 bg-blue-900/20' :
+                                    item.promedio >= 3.0 ? 'text-yellow-400 bg-yellow-900/20' :
+                                    'text-red-400 bg-red-900/20'
+                                  }`}>
+                                    {item.promedio}
+                                  </span>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-12 text-slate-500">
+                  No se pudieron cargar los datos del dashboard.
+                </div>
+              )}
+            </div>
           )}
         </div>
       </main>

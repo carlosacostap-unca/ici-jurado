@@ -15,6 +15,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Investigación con Impacto",
   description: "Plataforma de evaluación para Investigación con Impacto",
+  icons: {
+    icon: '/logo_ftyca_blanco_128.png',
+  },
 };
 
 export default function RootLayout({
