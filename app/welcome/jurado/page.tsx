@@ -15,11 +15,7 @@ export default function JuradoWelcomePage() {
   const [errorPropuestas, setErrorPropuestas] = useState<string | null>(null);
 
   // Estados para la evaluación
-  const [criterios, setCriterios] = useState<RecordModel[]>([]);
   const [evaluaciones, setEvaluaciones] = useState<RecordModel[]>([]);
-  const [evaluandoPropuesta, setEvaluandoPropuesta] = useState<RecordModel | null>(null);
-  const [puntajes, setPuntajes] = useState<Record<string, number>>({});
-  const [isSubmittingEvaluacion, setIsSubmittingEvaluacion] = useState(false);
 
   useEffect(() => {
     if (!pb.authStore.isValid || !pb.authStore.model) {
@@ -55,14 +51,12 @@ export default function JuradoWelcomePage() {
       setIsLoadingPropuestas(true);
       setErrorPropuestas(null);
       
-      const [propuestasRes, criteriosRes, evaluacionesRes] = await Promise.all([
+      const [propuestasRes, evaluacionesRes] = await Promise.all([
         pb.collection('propuestas').getFullList({ sort: 'orden' }),
-        pb.collection('criterios').getFullList({ sort: 'orden' }),
         pb.collection('evaluaciones').getFullList({ filter: `jurado = "${userId}"` })
       ]);
 
       setPropuestas(propuestasRes);
-      setCriterios(criteriosRes);
       setEvaluaciones(evaluacionesRes);
     } catch (error: any) {
       console.error("Error al cargar datos:", error);
@@ -75,74 +69,6 @@ export default function JuradoWelcomePage() {
   const handleLogout = () => {
     pb.authStore.clear();
     router.push('/login');
-  };
-
-  const handleAbrirEvaluacion = (propuesta: RecordModel) => {
-    setEvaluandoPropuesta(propuesta);
-    
-    // Buscar si ya hay una evaluación previa para esta propuesta
-    const evaluacionPrevia = evaluaciones.find(e => e.propuesta === propuesta.id);
-    if (evaluacionPrevia && evaluacionPrevia.puntajes) {
-      setPuntajes(evaluacionPrevia.puntajes);
-    } else {
-      setPuntajes({});
-    }
-  };
-
-  const handleCerrarEvaluacion = () => {
-    setEvaluandoPropuesta(null);
-    setPuntajes({});
-  };
-
-  const handlePuntajeChange = (criterioId: string, valor: number) => {
-    setPuntajes(prev => ({
-      ...prev,
-      [criterioId]: valor
-    }));
-  };
-
-  const handleGuardarEvaluacion = async () => {
-    if (!user || !evaluandoPropuesta) return;
-
-    // Validar que todos los criterios tengan un puntaje
-    const criteriosFaltantes = criterios.filter(c => !puntajes[c.id]);
-    if (criteriosFaltantes.length > 0) {
-      alert('Por favor, califica todos los criterios antes de guardar.');
-      return;
-    }
-
-    try {
-      setIsSubmittingEvaluacion(true);
-      
-      const evaluacionExistente = evaluaciones.find(e => e.propuesta === evaluandoPropuesta.id);
-      
-      const data = {
-        jurado: user.id,
-        propuesta: evaluandoPropuesta.id,
-        puntajes: puntajes
-      };
-
-      let evaluacionGuardada: RecordModel;
-
-      if (evaluacionExistente) {
-        // Actualizar
-        evaluacionGuardada = await pb.collection('evaluaciones').update(evaluacionExistente.id, data);
-        setEvaluaciones(prev => prev.map(e => e.id === evaluacionGuardada.id ? evaluacionGuardada : e));
-      } else {
-        // Crear nueva
-        evaluacionGuardada = await pb.collection('evaluaciones').create(data);
-        setEvaluaciones(prev => [...prev, evaluacionGuardada]);
-      }
-
-      alert('¡Evaluación guardada exitosamente!');
-      handleCerrarEvaluacion();
-      
-    } catch (error: any) {
-      console.error("Error al guardar evaluación:", error);
-      alert("Hubo un error al guardar la evaluación. " + (error.message || ""));
-    } finally {
-      setIsSubmittingEvaluacion(false);
-    }
   };
 
   if (!user) {
@@ -261,7 +187,7 @@ export default function JuradoWelcomePage() {
                         </div>
                       </div>
                       <button
-                        onClick={() => handleAbrirEvaluacion(propuesta)}
+                        onClick={() => router.push(`/welcome/jurado/evaluar/${propuesta.id}`)}
                         className={`w-full sm:w-auto font-medium py-2 px-5 rounded-lg transition-all border ${
                           yaEvaluada 
                             ? 'bg-slate-800/50 hover:bg-slate-700 text-slate-300 border-slate-700' 
@@ -278,100 +204,6 @@ export default function JuradoWelcomePage() {
           </div>
         </div>
       </main>
-
-      {/* Modal de Evaluación */}
-      {evaluandoPropuesta && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-slate-900 rounded-2xl shadow-xl border border-slate-700 w-full max-w-3xl max-h-[90vh] flex flex-col">
-            <div className="p-4 sm:p-6 border-b border-slate-800 flex justify-between items-start sticky top-0 bg-slate-900 rounded-t-2xl z-10">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-bold text-white mb-1">Evaluación de Propuesta</h2>
-                <p className="text-blue-400 font-medium text-sm sm:text-base">{evaluandoPropuesta.titulo}</p>
-                <p className="text-slate-400 text-xs sm:text-sm">Expositor: {evaluandoPropuesta.expositor}</p>
-              </div>
-              <button 
-                onClick={handleCerrarEvaluacion}
-                className="text-slate-400 hover:text-white bg-slate-800 hover:bg-slate-700 p-2 rounded-lg transition-colors"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </button>
-            </div>
-
-            <div className="p-4 sm:p-6 overflow-y-auto flex-1 space-y-6">
-              {criterios.length === 0 ? (
-                <div className="text-center py-8 text-slate-500">
-                  No hay criterios de evaluación registrados en el sistema.
-                </div>
-              ) : (
-                criterios.map((criterio) => (
-                  <div key={criterio.id} className="bg-slate-950/50 p-4 sm:p-5 rounded-xl border border-slate-800">
-                    <div className="flex gap-3 items-start mb-4">
-                      <div className="bg-blue-900/30 text-blue-400 w-8 h-8 rounded-full flex items-center justify-center font-bold flex-shrink-0 mt-1">
-                        {criterio.orden || '-'}
-                      </div>
-                      <div className="flex-1">
-                        <h3 className="font-bold text-slate-200 text-lg mb-2">{criterio.titulo}</h3>
-                        <div 
-                          className="text-sm text-slate-400 quill-content" 
-                          dangerouslySetInnerHTML={{ __html: criterio.descripcion }} 
-                        />
-                      </div>
-                    </div>
-                    
-                    <div className="mt-4 pt-4 border-t border-slate-800/50">
-                      <label className="block text-sm font-medium text-slate-300 mb-3 text-center sm:text-left">
-                        Calificación (1 a 5)
-                      </label>
-                      <div className="flex justify-center sm:justify-start gap-2 sm:gap-4 flex-wrap">
-                        {[1, 2, 3, 4, 5].map((valor) => (
-                          <label 
-                            key={valor}
-                            className={`flex flex-col items-center justify-center w-10 h-10 sm:w-14 sm:h-14 rounded-full cursor-pointer border-2 transition-all ${
-                              puntajes[criterio.id] === valor 
-                                ? 'border-blue-500 bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.4)]' 
-                                : 'border-slate-700 bg-slate-900 text-slate-400 hover:border-slate-500 hover:bg-slate-800'
-                            }`}
-                          >
-                            <input 
-                              type="radio" 
-                              name={`criterio-${criterio.id}`} 
-                              value={valor}
-                              checked={puntajes[criterio.id] === valor}
-                              onChange={() => handlePuntajeChange(criterio.id, valor)}
-                              className="hidden"
-                            />
-                            <span className="text-base sm:text-xl font-bold">{valor}</span>
-                          </label>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            <div className="p-4 sm:p-6 border-t border-slate-800 bg-slate-900 rounded-b-2xl sticky bottom-0">
-              <div className="flex justify-end gap-3">
-                <button
-                  onClick={handleCerrarEvaluacion}
-                  className="px-4 sm:px-6 py-2.5 rounded-lg font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700 text-sm sm:text-base"
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={handleGuardarEvaluacion}
-                  disabled={isSubmittingEvaluacion || criterios.length === 0}
-                  className="px-4 sm:px-6 py-2.5 rounded-lg font-medium text-white bg-blue-600 hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-900/20 text-sm sm:text-base"
-                >
-                  {isSubmittingEvaluacion ? 'Guardando...' : 'Guardar Evaluación'}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
