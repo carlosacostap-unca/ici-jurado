@@ -57,7 +57,7 @@ export default function DetalleRankingPage() {
   };
 
   const handleVolver = () => {
-    router.push('/welcome/jurado');
+    router.back();
   };
 
   if (isLoading) {
