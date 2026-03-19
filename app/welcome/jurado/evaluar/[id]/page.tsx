@@ -100,7 +100,6 @@ export default function EvaluarPropuestaPage() {
         await pb.collection('evaluaciones').create(data);
       }
 
-      alert('¡Evaluación guardada exitosamente!');
       router.push('/welcome/jurado');
       
     } catch (error: any) {
