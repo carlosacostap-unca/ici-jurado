@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { pb } from '../../lib/pocketbase';
 import type { RecordModel } from 'pocketbase';
 
-export default function JuradoWelcomePage() {
+function JuradoContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<RecordModel | null>(null);
   
   // Estados para las propuestas
@@ -20,6 +21,14 @@ export default function JuradoWelcomePage() {
 
   // Pestaña activa
   const [activeTab, setActiveTab] = useState<'propuestas' | 'ranking'>('propuestas');
+
+  useEffect(() => {
+    // Si viene el parámetro tab en la URL, lo usamos
+    const tabParam = searchParams.get('tab');
+    if (tabParam === 'ranking' || tabParam === 'propuestas') {
+      setActiveTab(tabParam);
+    }
+  }, [searchParams]);
 
   useEffect(() => {
     if (!pb.authStore.isValid || !pb.authStore.model) {
@@ -368,5 +377,17 @@ export default function JuradoWelcomePage() {
         </button>
       </div>
     </div>
+  );
+}
+
+export default function JuradoWelcomePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="text-xl font-medium text-slate-400">Cargando panel...</div>
+      </div>
+    }>
+      <JuradoContent />
+    </Suspense>
   );
 }
