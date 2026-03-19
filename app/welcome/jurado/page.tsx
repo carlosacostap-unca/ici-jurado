@@ -299,10 +299,11 @@ export default function JuradoWelcomePage() {
                   return rankingData.map((propuesta, index) => (
                     <div 
                       key={propuesta.id} 
-                      className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-xl border border-slate-800 bg-slate-950/30"
+                      onClick={() => router.push(`/welcome/jurado/ranking/${propuesta.id}`)}
+                      className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 rounded-xl border border-slate-800 bg-slate-950/30 cursor-pointer hover:bg-slate-900 transition-colors group"
                     >
                       <div className="flex gap-4 items-center mb-3 sm:mb-0 w-full sm:w-auto">
-                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 bg-blue-900/30 text-blue-400 border border-blue-800/50">
+                        <div className="w-10 h-10 rounded-full flex items-center justify-center font-bold text-lg flex-shrink-0 bg-blue-900/30 text-blue-400 border border-blue-800/50 group-hover:bg-blue-600 group-hover:text-white transition-colors">
                           #{index + 1}
                         </div>
                         <div>
