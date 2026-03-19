@@ -134,7 +134,7 @@ export default function JuradoWelcomePage() {
               <div className="flex justify-between items-center text-sm">
                 <span className="text-blue-200">Avance de Evaluación:</span>
                 <span className="font-bold text-blue-300 bg-slate-800 px-2 py-1 rounded-md border border-slate-700">
-                  {evaluaciones.length} / {propuestas.length}
+                  {new Set(evaluaciones.map(e => e.propuesta)).size} / {propuestas.length}
                 </span>
               </div>
             </div>
