@@ -280,7 +280,9 @@ export default function JuradoWelcomePage() {
                         ...propuesta,
                         totalScore,
                         isCompleta,
-                        yaEvaluada: !!evaluacion
+                        yaEvaluada: !!evaluacion,
+                        titulo: propuesta.titulo,
+                        expositor: propuesta.expositor
                       };
                     })
                     .filter(p => p.yaEvaluada)
